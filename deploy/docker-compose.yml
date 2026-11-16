@@ -1,0 +1,41 @@
+services:
+  anythingllm:
+    image: mintplexlabs/anythingllm:latest
+    container_name: anythingllm
+    restart: unless-stopped
+    cap_add: [SYS_ADMIN]
+    security_opt: ["no-new-privileges:true"]
+    # Port exposé uniquement en local : l'accès public passe par Caddy (HTTPS)
+    ports: ["127.0.0.1:3001:3001"]
+    volumes:
+      - ./storage:/app/server/storage
+      - ./storage/.env:/app/server/.env
+    environment:
+      STORAGE_DIR: /app/server/storage
+      SERVER_PORT: "3001"
+      JWT_SECRET: ${JWT_SECRET}
+      SIG_KEY: ${SIG_KEY}
+      SIG_SALT: ${SIG_SALT}
+      DISABLE_TELEMETRY: "true"
+      LLM_PROVIDER: mistral
+      MISTRAL_API_KEY: ${MISTRAL_API_KEY}
+      MISTRAL_MODEL_PREF: ${MISTRAL_MODEL_PREF:-mistral-large-latest}
+      EMBEDDING_ENGINE: native
+      VECTOR_DB: lancedb
+
+  caddy:
+    image: caddy:2
+    container_name: caddy
+    restart: unless-stopped
+    ports: ["80:80", "443:443"]
+    environment:
+      DOMAIN: ${DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on: [anythingllm]
+
+volumes:
+  caddy_data:
+  caddy_config:
